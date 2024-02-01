@@ -1,0 +1,70 @@
+<?php
+require 'database.php';
+ $UIDresult = preg_replace('/[^\w\d]+/', '', $_REQUEST["UIDresult"]);
+    
+    // Save UIDresult to UIDContainer.php
+    $Write = "<?php \$UIDresult='" . $UIDresult . "'; echo \$UIDresult; ?>";
+    file_put_contents('UIDContainer.php', $Write);
+if (!empty($_REQUEST["UIDresult"])) {
+    date_default_timezone_set('Asia/Kolkata');
+    
+     // Get client IP address
+    if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+        $ip = $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    } elseif (isset($_SERVER['HTTP_X_FORWARDED'])) {
+        $ip = $_SERVER['HTTP_X_FORWARDED'];
+    } elseif (isset($_SERVER['HTTP_FORWARDED_FOR'])) {
+        $ip = $_SERVER['HTTP_FORWARDED_FOR'];
+    } elseif (isset($_SERVER['HTTP_FORWARDED'])) {
+        $ip = $_SERVER['HTTP_FORWARDED'];
+    } elseif (isset($_SERVER['REMOTE_ADDR'])) {
+        $ip = $_SERVER['REMOTE_ADDR'];
+    } else {
+        $ip = '0';
+    }
+
+    $date = date('Y-m-d');
+    $time = date('H:i:s');
+
+    $pdo = Database::connect();
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // Use prepared statement to prevent SQL injection
+    $sql = "INSERT INTO `attadance_table`(`att_card_id`,`att_ip`, `att_date`, `att_time`) VALUES (?, ?, ?, ?)";
+    $q = $pdo->prepare($sql);
+    $q->execute(array($UIDresult, $ip, $date, $time));
+
+    Database::disconnect();
+}
+?>
+<?php
+require 'database.php';
+
+if (!empty($_REQUEST["UIDresult"])) {
+    date_default_timezone_set('Asia/Kolkata');
+    $UIDresult = preg_replace('/[^\w\d]+/', '', $_REQUEST["UIDresult"]);
+
+    $pdo = Database::connect();
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // Use prepared statement to prevent SQL injection
+    $selectSql = "SELECT * FROM `attadance_table` WHERE `att_card_id` = :UIDresult";
+    $selectStmt = $pdo->prepare($selectSql);
+    $selectStmt->bindParam(':UIDresult', $UIDresult);
+    $selectStmt->execute();
+
+    // Fetch the data
+    $userData = $selectStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Check if user data is retrieved successfully
+    if ($userData) {
+        echo json_encode($userData);
+    } else {
+        echo "No data found for UIDresult: $UIDresult";
+    }
+
+    Database::disconnect();
+}
+?>
